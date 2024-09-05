@@ -11,7 +11,7 @@ namespace sx64
     CPU::CPU()
         : r(8, 0), sb(0), sp(0), ip(SX64_ADDR_SYS_BOOTSTRAP), fr(0), bus(std::make_shared<Bus>()), running(false)
     {
-        spdlog::trace("CPU initialized with IP: {:#04x}", ip);
+        spdlog::trace("CPU initialized with IP: {:#016x}", ip);
     }
 
     void CPU::run()
@@ -30,7 +30,7 @@ namespace sx64
 
     void CPU::fetchInstructions()
     {
-        spdlog::trace("Fetching instructions from IP {:#04x}", ip);
+        spdlog::trace("Fetching instructions from IP {:#016x}", ip);
 
         uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
         uint64_t instructionSize = 0;
@@ -51,14 +51,14 @@ namespace sx64
         {
             if (ip + i >= bus->getDevices().back()->getSize())
             {
-                spdlog::error("Instruction read out of bounds at IP {:#04x}", ip + i);
+                spdlog::error("Instruction read out of bounds at IP {:#016x}", ip + i);
                 halt();
                 return;
             }
             instructionData |= (bus->read(ip + i) << (i * 8));
         }
 
-        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#04x}", instructionSize, instructionData, ip);
+        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#016x}", instructionSize, instructionData, ip);
 
         auto instruction = decodeInstruction(instructionData);
         if (instruction)
@@ -92,7 +92,7 @@ namespace sx64
 
     void CPU::step()
     {
-        spdlog::trace("CPU stepping. Current IP: {:#04x}", ip);
+        spdlog::trace("CPU stepping. Current IP: {:#016x}", ip);
         fetchInstructions();
     }
 

@@ -2,9 +2,9 @@
 #include <devices/memory.hpp>
 
 MemoryDevice::MemoryDevice(const std::string &name, uint64_t size, bool readOnly)
-    : Device(name), memory(size, 0), size(size), readOnly(readOnly)
+    : Device(name, readOnly), memory(size, 0), size(size), readOnly(readOnly)
 {
-    spdlog::trace("MemoryDevice \"{}\" created with size {} bytes", name, size);
+    spdlog::trace("MemoryDevice \"{}\" created with size {} bytes (Permissions: {})", name, size, getPermissionStr());
 }
 
 MemoryDevice::MemoryDevice(const std::string &name, uint64_t size, bool readOnly, const uint8_t *initBuffer, size_t bufferSize)
@@ -46,10 +46,10 @@ uint64_t MemoryDevice::read(uint64_t address) const
     if (address < size)
     {
         uint64_t data = memory[address];
-        spdlog::trace("MemoryDevice \"{}\" read at address {:#x} with data {:#x}", getName(), address, data);
+        spdlog::trace("MemoryDevice \"{}\" read at address {:#016x} with data {:#016x}", getName(), address, data);
         return data;
     }
-    spdlog::warn("MemoryDevice \"{}\" read out of bounds at address {:#x}", getName(), address);
+    spdlog::warn("MemoryDevice \"{}\" read out of bounds at address {:#016x}", getName(), address);
     return 0;
 }
 
@@ -58,11 +58,14 @@ void MemoryDevice::write(uint64_t address, uint64_t data)
     if (!readOnly && address < size)
     {
         memory[address] = static_cast<uint8_t>(data & 0xFF);
-        spdlog::trace("MemoryDevice \"{}\" wrote {:#x} at address {:#x}", getName(), data, address);
+        spdlog::trace("MemoryDevice \"{}\" wrote {:#016x} at address {:#016x}", getName(), data, address);
     }
     else
     {
-        spdlog::warn("MemoryDevice \"{}\" write out of bounds or read-only at address {:#x}", getName(), address);
+        if (readOnly)
+            spdlog::warn("MemoryDevice \"{}\" is read-only, trying to write to address {:#016x}", getName(), address);
+        else
+            spdlog::warn("MemoryDevice \"{}\" write out of bounds at address {:#016x}", getName(), address);
     }
 }
 

@@ -31,7 +31,7 @@ void Bus::enable()
 
 uint64_t Bus::read(uint64_t address) const
 {
-    spdlog::trace("Bus read at address {:#x}", address);
+    spdlog::trace("Bus read at address {:#016x}", address);
 
     for (const auto &device : devices)
     {
@@ -41,25 +41,25 @@ uint64_t Bus::read(uint64_t address) const
             if (address < deviceSize)
             {
                 uint64_t data = device->read(address);
-                spdlog::trace("Read {:#x} from device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
+                spdlog::trace("Read {:#x} from device \"{}\"", data, device->getName());
                 return data;
             }
             address -= deviceSize;
         }
         else
         {
-            spdlog::debug("Device \"{}\" is disabled (address range: 0 to {:#x})", device->getName(), device->getSize() - 1);
+            spdlog::debug("Device \"{}\" is disabled", device->getName());
         }
     }
 
-    spdlog::warn("No device found for read at address {:#x}", address);
+    spdlog::warn("No device found for read at address {:#016x}", address);
     g_cpu.halt();
     return 0;
 }
 
 void Bus::write(uint64_t address, uint64_t data)
 {
-    spdlog::trace("Bus write at address {:#x} with data {:#x}", address, data);
+    spdlog::trace("Bus write at address {:#016x} with data {:#016x}", address, data);
 
     for (const auto &device : devices)
     {
@@ -69,18 +69,18 @@ void Bus::write(uint64_t address, uint64_t data)
             if (address < deviceSize)
             {
                 device->write(address, data);
-                spdlog::trace("Wrote {:#x} to device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
+                spdlog::trace("Wrote {:#x} to device \"{}\"", data, device->getName());
                 return;
             }
             address -= deviceSize;
         }
         else
         {
-            spdlog::debug("Device \"{}\" is disabled (address range: 0 to {:#x})", device->getName(), device->getSize() - 1);
+            spdlog::debug("Device \"{}\" is disabled", device->getName());
         }
     }
 
-    spdlog::warn("No device found for write at address {:#x}", address);
+    spdlog::warn("No device found for write at address {:#016x}", address);
     g_cpu.halt();
 }
 

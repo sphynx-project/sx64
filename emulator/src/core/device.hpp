@@ -7,7 +7,7 @@
 class Device
 {
 public:
-    Device(const std::string &name = "Unnamed Device", uint64_t baseAddress = 0);
+    Device(const std::string &name = "Unnamed Device", bool readOnly = false);
     virtual ~Device() = default;
 
     virtual void initialize();
@@ -27,7 +27,6 @@ public:
 protected:
     std::string name;
     bool enabled;
-    uint64_t baseAddress;
 
 private:
     bool readOnly;

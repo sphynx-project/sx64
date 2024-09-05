@@ -253,6 +253,7 @@ int main(int argc, char **argv)
     }
 
     spdlog::debug("Running CPU simulation...");
+    cpu.getBus()->write(0, 0x1);
     cpu.run();
     spdlog::debug("CPU simulation finished.");
 

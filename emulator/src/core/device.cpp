@@ -1,10 +1,10 @@
 #include <spdlog/spdlog.h>
 #include <core/device.hpp>
 
-Device::Device(const std::string &name, uint64_t baseAddress)
-    : name(name), enabled(true), baseAddress(baseAddress), readOnly(false)
+Device::Device(const std::string &name, bool readOnly)
+    : name(name), enabled(true), readOnly(readOnly)
 {
-    spdlog::trace("Device \"{}\" created at base address {:#x}", name, baseAddress);
+    spdlog::trace("Device \"{}\" created (Permissions {})", name, getPermissionStr());
 }
 
 void Device::initialize()
@@ -42,7 +42,7 @@ std::string Device::getName() const
 
 std::string Device::getPermissionStr() const
 {
-    return readOnly ? "r" : "r/w";
+    return readOnly ? "ro" : "rw";
 }
 
 bool Device::isEnabled() const
