@@ -1,4 +1,5 @@
+**/build/
+**/.vscode/
+**/logs/
 *.o
-**/build/**
 *sx64*emu*
-**/.vscode/**

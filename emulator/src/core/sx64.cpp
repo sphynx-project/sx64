@@ -6,8 +6,6 @@ namespace sx64
     CPU::CPU()
         : r(8, 0), sb(0), sp(0), ip(SX64_ADDR_SYS_BOOTSTRAP), fr(0), bus(std::make_shared<Bus>()), running(false)
     {
-        auto memory = std::make_shared<MemoryDevice>("RAM", 0x100, false); // 256 bytes of RAM
-        bus->attachDevice(memory);
     }
 
     void CPU::run()
