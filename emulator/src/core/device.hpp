@@ -6,7 +6,7 @@
 class Device
 {
 public:
-    Device(const std::string &name = "Unnamed Device");
+    Device(const std::string &name = "Unnamed Device", uint64_t baseAddress = 0);
     virtual ~Device() = default;
 
     virtual void initialize();
@@ -17,7 +17,9 @@ public:
 
     virtual uint64_t getSize() const = 0;
 
-    std::string getName() const;
+    virtual std::string getPermissionStr() const;
+    virtual std::string getName() const;
+
     bool isEnabled() const;
     void enable();
     void disable();
@@ -25,4 +27,5 @@ public:
 private:
     std::string name;
     bool enabled;
+    bool readOnly;
 };

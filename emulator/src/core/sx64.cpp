@@ -1,5 +1,6 @@
 #include <core/sx64.hpp>
 #include <spdlog/spdlog.h>
+#include <global.hpp>
 
 // Instructions
 #include <instructions/hlt.hpp>
@@ -16,6 +17,7 @@ namespace sx64
     void CPU::run()
     {
         spdlog::info("sx64: Starting CPU execution...");
+        bus->enable();
         running = true;
 
         while (running)
@@ -47,6 +49,12 @@ namespace sx64
         uint64_t instructionData = 0;
         for (size_t i = 0; i < instructionSize; ++i)
         {
+            if (ip + i >= bus->getDevices().back()->getSize())
+            {
+                spdlog::error("Instruction read out of bounds at IP {:#04x}", ip + i);
+                halt();
+                return;
+            }
             instructionData |= (bus->read(ip + i) << (i * 8));
         }
 
@@ -61,7 +69,7 @@ namespace sx64
         }
         else
         {
-            spdlog::critical("Unkown instruction at IP {:#016x} ({:#04x})", ip, instructionData);
+            spdlog::critical("Unknown instruction at IP {:#016x} ({:#04x})", ip, instructionData);
             halt();
         }
     }
@@ -73,7 +81,9 @@ namespace sx64
         if (data == static_cast<int>(InstructionType::HLT))
         {
             return std::make_unique<HLTInstruction>(data);
-        } else if (data == static_cast<int>(InstructionType::NOP)) {
+        }
+        else if (data == static_cast<int>(InstructionType::NOP))
+        {
             return std::make_unique<NOPInstruction>(data);
         }
 
@@ -111,7 +121,7 @@ namespace sx64
         spdlog::info("FR: {:#06x}", fr);
 
         spdlog::info("Memory Layout:");
-        
+
         uint64_t startAddress = 0;
         for (const auto &device : bus->getDevices())
         {
@@ -134,14 +144,15 @@ namespace sx64
             else
                 sizeStr = fmt::format("{} B", size);
 
-            spdlog::info(" - {:#018x} -> {:#018x} ({}) : {}",
-                        startAddress,
-                        endAddress,
-                        sizeStr,
-                        device->getName());
-            
+            spdlog::info(" - {:#018x} -> {:#018x} ({:<8}) {:<3}: {}",
+                         startAddress,
+                         endAddress,
+                         sizeStr,
+                         device->getPermissionStr(),
+                         device->getName());
+
             startAddress = endAddress;
         }
     }
-    
+
 }

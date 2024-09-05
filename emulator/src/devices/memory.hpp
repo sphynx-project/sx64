@@ -19,6 +19,7 @@ public:
     void write(uint64_t address, uint64_t data) override;
 
     uint64_t getSize() const override;
+    std::string getPermissionStr() const override;
 
 private:
     std::vector<uint8_t> memory;

@@ -14,7 +14,7 @@ namespace sx64
     {
         type = InstructionType::NOP;
         decodedString = "NOP";
-        SPDLOG_TRACE("NOPInstruction decoded: {}", decodedString);
+        spdlog::trace("NOPInstruction decoded: {}", decodedString);
     }
 
     uint64_t NOPInstruction::getSize() const
@@ -22,8 +22,8 @@ namespace sx64
         return 1;
     }
 
-    void NOPInstruction::action(CPU& cpu)
+    void NOPInstruction::action([[maybe_unused]] CPU &cpu)
     {
-        SPDLOG_TRACE("NOPInstruction action triggered. Doing nothing.");
+        spdlog::trace("NOPInstruction action triggered. Doing nothing.");
     }
 }

@@ -14,7 +14,7 @@ namespace sx64
     {
         type = InstructionType::HLT;
         decodedString = "HLT";
-        SPDLOG_TRACE("HLTInstruction decoded: {}", decodedString);
+        spdlog::trace("HLTInstruction decoded: {}", decodedString);
     }
 
     uint64_t HLTInstruction::getSize() const
@@ -22,9 +22,9 @@ namespace sx64
         return 1;
     }
 
-    void HLTInstruction::action(CPU& cpu)
+    void HLTInstruction::action(CPU &cpu)
     {
-        SPDLOG_TRACE("HLTInstruction action triggered. Halting CPU.");
+        spdlog::trace("HLTInstruction action triggered. Halting CPU.");
         cpu.halt();
     }
 }
