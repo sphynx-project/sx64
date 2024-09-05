@@ -31,12 +31,8 @@ void print_version()
 
 int main(int argc, char **argv)
 {
-
     auto file_logger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/sx64.log", true);
-    file_logger->set_level(spdlog::level::trace);
-
     auto console_logger = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_logger->set_level(spdlog::level::info);
 
     auto logger = std::make_shared<spdlog::logger>("sx64_logger", spdlog::sinks_init_list{file_logger, console_logger});
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
@@ -65,12 +61,12 @@ int main(int argc, char **argv)
         }
         else if (arg == "-v" || arg == "--verbose")
         {
-            console_logger->set_level(spdlog::level::debug);
+            logger->set_level(spdlog::level::debug);
             spdlog::info("Verbose logging enabled");
         }
         else if (arg == "-vv" || arg == "--extra-verbose")
         {
-            console_logger->set_level(spdlog::level::trace);
+            logger->set_level(spdlog::level::trace);
             spdlog::info("Extra verbose logging enabled");
         }
         else if (arg == "-b" || arg == "-s" || arg == "--sys-bootstrap" || arg == "-bios")
@@ -92,6 +88,11 @@ int main(int argc, char **argv)
             {
                 krnl_bootstrap = arg;
                 spdlog::debug("Kernel bootstrap image set to: {}", krnl_bootstrap);
+            }
+            else if (arg[0] == '-')
+            {
+                spdlog::error("Unknown argument: \"{}\"", arg);
+                return 1;
             }
             else
             {
