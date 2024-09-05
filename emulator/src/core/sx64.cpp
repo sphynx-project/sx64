@@ -81,4 +81,18 @@ namespace sx64
     {
         return bus;
     }
+
+    void CPU::dumpState() const
+    {
+        SPDLOG_INFO("CPU State Dump:");
+        SPDLOG_INFO("Registers:");
+        for (size_t i = 0; i < r.size(); ++i)
+        {
+            SPDLOG_INFO("  R{}: {:#018x}", i, r[i]);
+        }
+        SPDLOG_INFO("SB: {:#018x}", sb);
+        SPDLOG_INFO("SP: {:#018x}", sp);
+        SPDLOG_INFO("IP: {:#018x}", ip);
+        SPDLOG_INFO("FR: {:#06x}", fr);
+    }   
 }

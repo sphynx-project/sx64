@@ -8,5 +8,6 @@ int main()
     spdlog::set_pattern("[%H:%M:%S - %@] %^%-6l%$ | %v");
     sx64::CPU cpu;
     cpu.run();
+    cpu.dumpState();
     return 0;
 }

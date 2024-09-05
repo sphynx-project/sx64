@@ -33,5 +33,6 @@ namespace sx64
         void halt();
 
         std::shared_ptr<Bus> &getBus();
+        void dumpState() const;
     };
 }
