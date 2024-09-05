@@ -1,7 +1,3 @@
-Here's a README for your sx64 emulator project:
-
----
-
 # sx64 Emulator
 
 ## Overview
