@@ -1,16 +1,21 @@
 #include <core/sx64.hpp>
 #include <spdlog/spdlog.h>
 
+// Instructions
+#include <instructions/hlt.hpp>
+#include <instructions/nop.hpp>
+
 namespace sx64
 {
     CPU::CPU()
         : r(8, 0), sb(0), sp(0), ip(SX64_ADDR_SYS_BOOTSTRAP), fr(0), bus(std::make_shared<Bus>()), running(false)
     {
+        spdlog::trace("CPU initialized with IP: {:#04x}", ip);
     }
 
     void CPU::run()
     {
-        SPDLOG_INFO("sx64: starting...");
+        spdlog::info("sx64: Starting CPU execution...");
         running = true;
 
         while (running)
@@ -18,18 +23,19 @@ namespace sx64
             step();
         }
 
-        SPDLOG_INFO("sx64: finished");
+        spdlog::info("sx64: CPU execution finished");
     }
 
     void CPU::fetchInstructions()
     {
-        SPDLOG_INFO("Fetching instructions from IP {:#04x}", ip);
+        spdlog::trace("Fetching instructions from IP {:#04x}", ip);
 
         uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
         uint64_t instructionSize = 0;
 
         switch (opcode)
         {
+        case static_cast<uint8_t>(InstructionType::NOP):
         case static_cast<uint8_t>(InstructionType::HLT):
             instructionSize = 1;
             break;
@@ -44,34 +50,45 @@ namespace sx64
             instructionData |= (bus->read(ip + i) << (i * 8));
         }
 
-        SPDLOG_INFO("Fetched {}-byte instruction {:#016x} from address {:#04x}", instructionSize, instructionData, ip);
+        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#04x}", instructionSize, instructionData, ip);
 
         auto instruction = decodeInstruction(instructionData);
-        SPDLOG_INFO("Decoded instruction: {}", instruction->getDecodedString());
-
-        instruction->action(*this);
-        ip += instruction->getSize();
+        if (instruction)
+        {
+            spdlog::debug("Decoded instruction: {}", instruction->getDecodedString());
+            instruction->action(*this);
+            ip += instruction->getSize();
+        }
+        else
+        {
+            spdlog::critical("Unkown instruction at IP {:#016x} ({:#04x})", ip, instructionData);
+            halt();
+        }
     }
 
     std::unique_ptr<Instruction> CPU::decodeInstruction(uint64_t data)
     {
+        spdlog::trace("Decoding instruction data: {:#016x}", data);
+
         if (data == static_cast<int>(InstructionType::HLT))
         {
             return std::make_unique<HLTInstruction>(data);
+        } else if (data == static_cast<int>(InstructionType::NOP)) {
+            return std::make_unique<NOPInstruction>(data);
         }
 
-        // Handle other instruction types as needed
-        // Example placeholder for an unknown instruction
         return nullptr;
     }
 
     void CPU::step()
     {
+        spdlog::trace("CPU stepping. Current IP: {:#04x}", ip);
         fetchInstructions();
     }
 
     void CPU::halt()
     {
+        spdlog::info("CPU halt requested");
         running = false;
     }
 
@@ -82,15 +99,49 @@ namespace sx64
 
     void CPU::dumpState() const
     {
-        SPDLOG_INFO("CPU State Dump:");
-        SPDLOG_INFO("Registers:");
+        spdlog::info("CPU State Dump:");
+        spdlog::info("Registers:");
         for (size_t i = 0; i < r.size(); ++i)
         {
-            SPDLOG_INFO("  R{}: {:#018x}", i, r[i]);
+            spdlog::info("  R{}: {:#018x}", i, r[i]);
         }
-        SPDLOG_INFO("SB: {:#018x}", sb);
-        SPDLOG_INFO("SP: {:#018x}", sp);
-        SPDLOG_INFO("IP: {:#018x}", ip);
-        SPDLOG_INFO("FR: {:#06x}", fr);
-    }   
+        spdlog::info("SB: {:#018x}", sb);
+        spdlog::info("SP: {:#018x}", sp);
+        spdlog::info("IP: {:#018x}", ip);
+        spdlog::info("FR: {:#06x}", fr);
+
+        spdlog::info("Memory Layout:");
+        
+        uint64_t startAddress = 0;
+        for (const auto &device : bus->getDevices())
+        {
+            uint64_t size = device->getSize();
+            uint64_t endAddress = startAddress + size - 1;
+
+            if (size == 0)
+            {
+                endAddress = startAddress;
+            }
+
+            std::string sizeStr;
+
+            if (size >= 1024 * 1024 * 1024)
+                sizeStr = fmt::format("{:.2f} GB", size / static_cast<double>(1024 * 1024 * 1024));
+            else if (size >= 1024 * 1024)
+                sizeStr = fmt::format("{:.2f} MB", size / static_cast<double>(1024 * 1024));
+            else if (size >= 1024)
+                sizeStr = fmt::format("{:.2f} KB", size / static_cast<double>(1024));
+            else
+                sizeStr = fmt::format("{} B", size);
+
+            spdlog::info(" - {:#018x} -> {:#018x} ({}) : {}",
+                        startAddress,
+                        endAddress,
+                        sizeStr,
+                        device->getName());
+            
+            startAddress = endAddress;
+        }
+    }
+    
 }

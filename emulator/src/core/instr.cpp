@@ -1,10 +1,12 @@
 #include <core/instr.hpp>
+#include <spdlog/spdlog.h>
 
 namespace sx64
 {
     Instruction::Instruction(uint64_t data)
         : rawData(data), type(InstructionType::UNKNOWN)
     {
+        SPDLOG_TRACE("Instruction created with data {:#016x}", data);
     }
 
     InstructionType Instruction::getType() const

@@ -6,7 +6,6 @@
 #include <core/bus.hpp>
 #include <devices/memory.hpp>
 #include <core/instr.hpp>
-#include <instructions/hlt.hpp>
 
 #define SX64_ADDR_SYS_BOOTSTRAP 0x0000
 

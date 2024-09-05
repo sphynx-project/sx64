@@ -1,5 +1,6 @@
 #include <instructions/hlt.hpp>
 #include <core/sx64.hpp>
+#include <spdlog/spdlog.h>
 
 namespace sx64
 {
@@ -13,6 +14,7 @@ namespace sx64
     {
         type = InstructionType::HLT;
         decodedString = "HLT";
+        SPDLOG_TRACE("HLTInstruction decoded: {}", decodedString);
     }
 
     uint64_t HLTInstruction::getSize() const
@@ -22,6 +24,7 @@ namespace sx64
 
     void HLTInstruction::action(CPU& cpu)
     {
+        SPDLOG_TRACE("HLTInstruction action triggered. Halting CPU.");
         cpu.halt();
     }
 }

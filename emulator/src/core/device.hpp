@@ -15,6 +15,8 @@ public:
     virtual uint64_t read(uint64_t address);
     virtual void write(uint64_t address, uint64_t data);
 
+    virtual uint64_t getSize() const = 0;
+
     std::string getName() const;
     bool isEnabled() const;
     void enable();

@@ -10,7 +10,8 @@ namespace sx64
 
     enum class InstructionType
     {
-        HLT,
+        NOP = 0x00, 
+        HLT = 0x01,
         UNKNOWN
     };
 

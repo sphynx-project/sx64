@@ -26,6 +26,14 @@ Instruction Format
 ------------------
 The sx64 architecture uses a Complex Instruction Set Computing (CISC) model, with instructions varying in size. The length of each instruction changes dynamically based on its opcode. This flexibility allows for a broader range of operations and potentially more compact code compared to fixed-length instruction sets.
 
+- Format:
+The first byte of an instruction is the opcode. The rest of the format is determined by the opcode.
+
+Instruction List
+----------------
+- NOP: Opcode: 0x00, Size: 1
+- HLT: Opcode: 0x01, Size: 1
+
 Startup and Initialization
 --------------------------
 Upon startup, the sx64 CPU initializes by clearing all registers. It sets the Instruction Pointer (IP) to the address of the system bootstrap code (sys-bootstrap) to start hardware and CPU initialization. Following this, it jumps to the kernel bootstrap code (krnl-bootstrap) to load the operating system kernel. The exact addresses for these bootstraps are not predefined.
