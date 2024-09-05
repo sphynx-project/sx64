@@ -29,10 +29,14 @@ void print_version()
               << "For additional details, visit github.com/sphynxos or sphynx.shittydev.com.\n";
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
+
     auto file_logger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/sx64.log", true);
+    file_logger->set_level(spdlog::level::trace);
+
     auto console_logger = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_logger->set_level(spdlog::level::info);
 
     auto logger = std::make_shared<spdlog::logger>("sx64_logger", spdlog::sinks_init_list{file_logger, console_logger});
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
@@ -61,12 +65,12 @@ int main(int argc, char** argv)
         }
         else if (arg == "-v" || arg == "--verbose")
         {
-            logger->set_level(spdlog::level::debug);
+            console_logger->set_level(spdlog::level::debug);
             spdlog::info("Verbose logging enabled");
         }
         else if (arg == "-vv" || arg == "--extra-verbose")
         {
-            logger->set_level(spdlog::level::trace);
+            console_logger->set_level(spdlog::level::trace);
             spdlog::info("Extra verbose logging enabled");
         }
         else if (arg == "-b" || arg == "-s" || arg == "--sys-bootstrap" || arg == "-bios")
@@ -113,7 +117,6 @@ int main(int argc, char** argv)
 
     sx64::CPU cpu;
 
-    // Set up the system bootstrap memory device
     auto sys_bootstrap_mem = std::make_shared<MemoryDevice>("sys-bootstrap", 0x1000, true);
     cpu.getBus()->attachDevice(sys_bootstrap_mem);
     spdlog::debug("System bootstrap memory device attached: 4096 bytes");
@@ -126,7 +129,7 @@ int main(int argc, char** argv)
         spdlog::debug("System bootstrap image size: {} bytes", size);
 
         std::vector<uint8_t> buffer(size);
-        if (sys_image_file.read(reinterpret_cast<char*>(buffer.data()), size))
+        if (sys_image_file.read(reinterpret_cast<char *>(buffer.data()), size))
         {
             spdlog::trace("Loading system bootstrap image from: {}", sys_bootstrap);
             sys_bootstrap_mem->initializeWithBuffer(buffer.data(), size);
@@ -144,7 +147,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Set up the kernel bootstrap memory device
     std::ifstream image_file(krnl_bootstrap, std::ios::binary | std::ios::ate);
     if (image_file.is_open())
     {
@@ -156,7 +158,7 @@ int main(int argc, char** argv)
         cpu.getBus()->attachDevice(krnl_bootstrap_mem);
 
         std::vector<uint8_t> buffer(size);
-        if (image_file.read(reinterpret_cast<char*>(buffer.data()), size))
+        if (image_file.read(reinterpret_cast<char *>(buffer.data()), size))
         {
             spdlog::trace("Loading kernel bootstrap image from: {}", krnl_bootstrap);
             krnl_bootstrap_mem->initializeWithBuffer(buffer.data(), size);
