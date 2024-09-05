@@ -1,10 +1,10 @@
-#include <core/device.hpp>
 #include <spdlog/spdlog.h>
+#include <core/device.hpp>
 
 Device::Device(const std::string &name, uint64_t baseAddress)
-    : name(name), enabled(true), baseAddress(baseAddress)
+    : name(name), enabled(true), baseAddress(baseAddress), readOnly(false)
 {
-    spdlog::trace("Device \"{}\" created at base address {:#04x}", name, baseAddress);
+    spdlog::trace("Device \"{}\" created at base address {:#x}", name, baseAddress);
 }
 
 void Device::initialize()
@@ -24,20 +24,25 @@ void Device::update()
     spdlog::trace("Device \"{}\" updated", name);
 }
 
-uint64_t Device::read([[maybe_unused]] uint64_t address)
+uint64_t Device::read(uint64_t address) const
 {
-    spdlog::trace("Device \"{}\" read at address {:#04x}", name, address);
+    spdlog::trace("Device \"{}\" read at address {:#x}", name, address);
     return 0;
 }
 
-void Device::write([[maybe_unused]] uint64_t address, [[maybe_unused]] uint64_t data)
+void Device::write(uint64_t address, uint64_t data)
 {
-    spdlog::trace("Device \"{}\" write at address {:#04x} with data {:#018x}", name, address, data);
+    spdlog::trace("Device \"{}\" write at address {:#x} with data {:#x}", name, address, data);
 }
 
 std::string Device::getName() const
 {
     return name;
+}
+
+std::string Device::getPermissionStr() const
+{
+    return readOnly ? "r" : "r/w";
 }
 
 bool Device::isEnabled() const
@@ -55,9 +60,4 @@ void Device::disable()
 {
     enabled = false;
     spdlog::debug("Device \"{}\" disabled", name);
-}
-
-std::string Device::getPermissionStr() const
-{
-    return readOnly ? "r" : "r/w";
 }

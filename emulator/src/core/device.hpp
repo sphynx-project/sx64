@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <memory>
 
 class Device
 {
@@ -12,20 +13,22 @@ public:
     virtual void initialize();
     virtual void reset();
     virtual void update();
-    virtual uint64_t read(uint64_t address);
+    virtual uint64_t read(uint64_t address) const;
     virtual void write(uint64_t address, uint64_t data);
 
     virtual uint64_t getSize() const = 0;
 
-    virtual std::string getPermissionStr() const;
-    virtual std::string getName() const;
-
+    std::string getName() const;
+    std::string getPermissionStr() const;
     bool isEnabled() const;
     void enable();
     void disable();
 
-private:
+protected:
     std::string name;
     bool enabled;
+    uint64_t baseAddress;
+
+private:
     bool readOnly;
 };
