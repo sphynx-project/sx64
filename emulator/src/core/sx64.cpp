@@ -144,7 +144,7 @@ namespace sx64
             else
                 sizeStr = fmt::format("{} B", size);
 
-            spdlog::debug(" - {:#018x} -> {:#018x} ({:<8}) {:<3}: {}",
+            spdlog::debug(" - {:#018x} -> {:#018x} ({}) {} : {}",
                           startAddress,
                           endAddress,
                           sizeStr,

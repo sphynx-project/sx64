@@ -25,8 +25,8 @@ void print_help()
               << "  -vv, --extra-verbose     Enables extra debug logging\n"
               << "  -V, --version            Show version information\n"
               << "  -bi, --boot-image        Specify the system bootstrap image (ROM image)\n"
-              << "  -ri, --ram-image         Specify the RAM image (kernel bootstrap image)\n"
-              << "  -rs, --ram-size          Specify RAM size (e.g., 2G, 512M, 1GiB) (default: 2GB)\n";
+              << "  -ri, --ram-image         Specify the kernel bootstrap image (RAM image)\n"
+              << "  -rs, --ram-size          Specify RAM size (e.g., 2G, 512M, 1GiB) (default: 32M)\n";
 }
 
 void print_version()
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 
     std::string sys_bootstrap;
     std::string krnl_bootstrap;
-    size_t ram_size = parse_ram_size("2M");
+    size_t ram_size = parse_ram_size("32M");
 
     spdlog::trace("Starting argument parsing");
 
@@ -253,7 +253,6 @@ int main(int argc, char **argv)
     }
 
     spdlog::debug("Running CPU simulation...");
-    cpu.getBus()->write(0, 0x1);
     cpu.run();
     spdlog::debug("CPU simulation finished.");
 
