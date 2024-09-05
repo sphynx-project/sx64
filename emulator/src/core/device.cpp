@@ -10,13 +10,13 @@ Device::Device(const std::string &name, uint64_t baseAddress)
 void Device::initialize()
 {
     enabled = true;
-    spdlog::debug("Device \"{}\" initialized", name);
+    spdlog::trace("Device \"{}\" initialized", name);
 }
 
 void Device::reset()
 {
     enabled = false;
-    spdlog::debug("Device \"{}\" reset", name);
+    spdlog::trace("Device \"{}\" reset", name);
 }
 
 void Device::update()
@@ -53,11 +53,11 @@ bool Device::isEnabled() const
 void Device::enable()
 {
     enabled = true;
-    spdlog::debug("Device \"{}\" enabled", name);
+    spdlog::trace("Device \"{}\" enabled", name);
 }
 
 void Device::disable()
 {
     enabled = false;
-    spdlog::debug("Device \"{}\" disabled", name);
+    spdlog::trace("Device \"{}\" disabled", name);
 }

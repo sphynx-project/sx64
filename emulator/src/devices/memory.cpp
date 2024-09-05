@@ -23,7 +23,7 @@ void MemoryDevice::initialize()
 {
     std::fill(memory.begin(), memory.end(), 0);
     Device::initialize();
-    spdlog::debug("MemoryDevice \"{}\" initialized with zeros", getName());
+    spdlog::trace("MemoryDevice \"{}\" initialized with zeros", getName());
 }
 
 void MemoryDevice::initializeWithBuffer(const uint8_t *initBuffer, size_t bufferSize)
@@ -33,7 +33,7 @@ void MemoryDevice::initializeWithBuffer(const uint8_t *initBuffer, size_t buffer
     {
         size_t bytesToCopy = std::min(bufferSize, size);
         std::memcpy(memory.data(), initBuffer, bytesToCopy);
-        spdlog::debug("MemoryDevice \"{}\" initialized with {} bytes from buffer", getName(), bytesToCopy);
+        spdlog::trace("MemoryDevice \"{}\" initialized with {} bytes from buffer", getName(), bytesToCopy);
     }
     else
     {
@@ -46,7 +46,7 @@ uint64_t MemoryDevice::read(uint64_t address) const
     if (address < size)
     {
         uint64_t data = memory[address];
-        spdlog::debug("MemoryDevice \"{}\" read at address {:#x} with data {:#x}", getName(), address, data);
+        spdlog::trace("MemoryDevice \"{}\" read at address {:#x} with data {:#x}", getName(), address, data);
         return data;
     }
     spdlog::warn("MemoryDevice \"{}\" read out of bounds at address {:#x}", getName(), address);
@@ -58,7 +58,7 @@ void MemoryDevice::write(uint64_t address, uint64_t data)
     if (!readOnly && address < size)
     {
         memory[address] = static_cast<uint8_t>(data & 0xFF);
-        spdlog::debug("MemoryDevice \"{}\" wrote {:#x} at address {:#x}", getName(), data, address);
+        spdlog::trace("MemoryDevice \"{}\" wrote {:#x} at address {:#x}", getName(), data, address);
     }
     else
     {

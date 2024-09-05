@@ -75,7 +75,7 @@ size_t parse_ram_size(const std::string &size_str)
     }
     else
     {
-        throw std::invalid_argument("Invalid RAM size suffix: " + suffix);
+        throw std::invalid_argument("Invalid size suffix: " + suffix);
     }
 }
 
@@ -114,12 +114,10 @@ int main(int argc, char **argv)
         else if (arg == "-v" || arg == "--verbose")
         {
             logger->set_level(spdlog::level::debug);
-            spdlog::info("Verbose logging enabled");
         }
         else if (arg == "-vv" || arg == "--extra-verbose")
         {
             logger->set_level(spdlog::level::trace);
-            spdlog::info("Extra verbose logging enabled");
         }
         else if (arg == "-bi" || arg == "--boot-image")
         {
@@ -175,7 +173,14 @@ int main(int argc, char **argv)
         }
     }
 
-    spdlog::info("Starting sx64 Emulator...");
+    if (sys_bootstrap.empty())
+    {
+        spdlog::error("System bootstrap image (--boot-image) is required.");
+        print_help();
+        return 1;
+    }
+
+    spdlog::debug("Starting sx64 Emulator...");
 
     sx64::CPU cpu;
     g_cpu = cpu;
@@ -184,43 +189,34 @@ int main(int argc, char **argv)
     cpu.getBus()->attachDevice(sys_bootstrap_mem);
     spdlog::debug("System bootstrap memory device attached: 4096 bytes");
 
-    if (!sys_bootstrap.empty())
+    std::ifstream sys_image_file(sys_bootstrap, std::ios::binary | std::ios::ate);
+    if (sys_image_file.is_open())
     {
-        std::ifstream sys_image_file(sys_bootstrap, std::ios::binary | std::ios::ate);
-        if (sys_image_file.is_open())
+        std::streamsize size = sys_image_file.tellg();
+        sys_image_file.seekg(0, std::ios::beg);
+        spdlog::trace("System bootstrap image size: {} bytes", size);
+        std::vector<uint8_t> buffer(size);
+        if (sys_image_file.read(reinterpret_cast<char *>(buffer.data()), size))
         {
-            std::streamsize size = sys_image_file.tellg();
-            sys_image_file.seekg(0, std::ios::beg);
-            spdlog::debug("System bootstrap image size: {} bytes", size);
-
-            std::vector<uint8_t> buffer(size);
-            if (sys_image_file.read(reinterpret_cast<char *>(buffer.data()), size))
-            {
-                spdlog::trace("Loading system bootstrap image from: {}", sys_bootstrap);
-                sys_bootstrap_mem->initializeWithBuffer(buffer.data(), size);
-                spdlog::debug("System bootstrap image loaded successfully");
-            }
-            else
-            {
-                spdlog::error("Failed to read system bootstrap image");
-                return 1;
-            }
+            spdlog::trace("Loading system bootstrap image from: {}", sys_bootstrap);
+            sys_bootstrap_mem->initializeWithBuffer(buffer.data(), size);
+            spdlog::debug("System bootstrap image loaded successfully");
         }
         else
         {
-            spdlog::error("Failed to open system bootstrap image: {}", sys_bootstrap);
-            sys_bootstrap_mem->initialize();
+            spdlog::error("Failed to read system bootstrap image");
             return 1;
         }
     }
     else
     {
-        spdlog::debug("No system bootstrap image provided, initializing with zeros");
+        spdlog::error("Failed to open system bootstrap image: {}", sys_bootstrap);
+        return 1;
     }
 
-    auto ram_mem = std::make_shared<MemoryDevice>("RAM", ram_size, false);
+    auto ram_mem = std::make_shared<MemoryDevice>("Generic (RAM)", ram_size, false);
     cpu.getBus()->attachDevice(ram_mem);
-    spdlog::debug("RAM memory device attached: {} bytes", ram_size);
+    spdlog::trace("RAM memory device attached: {} bytes", ram_size);
 
     if (!krnl_bootstrap.empty())
     {
@@ -256,11 +252,11 @@ int main(int argc, char **argv)
         ram_mem->initialize();
     }
 
-    spdlog::info("Running CPU simulation...");
+    spdlog::debug("Running CPU simulation...");
     cpu.run();
-    spdlog::info("CPU simulation finished.");
+    spdlog::debug("CPU simulation finished.");
 
-    spdlog::info("Dumping CPU state...");
+    spdlog::debug("Dumping CPU state...");
     cpu.dumpState();
 
     return 0;

@@ -63,7 +63,7 @@ namespace sx64
         auto instruction = decodeInstruction(instructionData);
         if (instruction)
         {
-            spdlog::debug("Decoded instruction: {}", instruction->getDecodedString());
+            spdlog::debug("{} @ {:#016x}", instruction->getDecodedString(), ip);
             instruction->action(*this);
             ip += instruction->getSize();
         }
@@ -98,7 +98,7 @@ namespace sx64
 
     void CPU::halt()
     {
-        spdlog::info("CPU halt requested");
+        spdlog::warn("CPU halt requested");
         running = false;
     }
 
@@ -109,18 +109,18 @@ namespace sx64
 
     void CPU::dumpState() const
     {
-        spdlog::info("CPU State Dump:");
-        spdlog::info("Registers:");
+        spdlog::debug("CPU State Dump:");
+        spdlog::debug("Registers:");
         for (size_t i = 0; i < r.size(); ++i)
         {
-            spdlog::info("  R{}: {:#018x}", i, r[i]);
+            spdlog::debug("  R{}: {:#018x}", i, r[i]);
         }
-        spdlog::info("SB: {:#018x}", sb);
-        spdlog::info("SP: {:#018x}", sp);
-        spdlog::info("IP: {:#018x}", ip);
-        spdlog::info("FR: {:#06x}", fr);
+        spdlog::debug("SB: {:#018x}", sb);
+        spdlog::debug("SP: {:#018x}", sp);
+        spdlog::debug("IP: {:#018x}", ip);
+        spdlog::debug("FR: {:#06x}", fr);
 
-        spdlog::info("Memory Layout:");
+        spdlog::debug("Memory Layout:");
 
         uint64_t startAddress = 0;
         for (const auto &device : bus->getDevices())
@@ -144,12 +144,12 @@ namespace sx64
             else
                 sizeStr = fmt::format("{} B", size);
 
-            spdlog::info(" - {:#018x} -> {:#018x} ({:<8}) {:<3}: {}",
-                         startAddress,
-                         endAddress,
-                         sizeStr,
-                         device->getPermissionStr(),
-                         device->getName());
+            spdlog::debug(" - {:#018x} -> {:#018x} ({:<8}) {:<3}: {}",
+                          startAddress,
+                          endAddress,
+                          sizeStr,
+                          device->getPermissionStr(),
+                          device->getName());
 
             startAddress = endAddress;
         }

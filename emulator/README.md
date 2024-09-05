@@ -38,8 +38,9 @@ The **sx64 Emulator** is an implementation of the sx64 CPU architecture, designe
 To run the emulator with premade BIOS (sys-bootstrap) and boot img (krnl-bootstrap):
 
 ```bash
-./sx64-generic-emu -b ../bios.img ../boot.img
+./sx64-generic-emu -bi ../bios.img -ri ../boot.img
 ```
+*The BIOS is just 4KB of pure 0s (NOP instructions) and the boot.img is a single HLT instruction, so expected output is a halt at IP 0x0000000000001000*
 
 The emulator will initialize and start executing instructions. You can view detailed logs of CPU operations and memory interactions. To see debug messages simply add the *-v* flag or *-vv* for extra debug messages.
 

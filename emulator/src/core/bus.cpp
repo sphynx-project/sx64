@@ -15,7 +15,7 @@ Bus::~Bus()
 void Bus::attachDevice(std::shared_ptr<Device> device)
 {
     devices.push_back(device);
-    spdlog::debug("Device \"{}\" attached to bus", device->getName());
+    spdlog::trace("Device \"{}\" attached to bus", device->getName());
     device->initialize();
     device->enable();
 }
@@ -25,7 +25,7 @@ void Bus::enable()
     for (const auto &device : devices)
     {
         device->enable();
-        spdlog::debug("Device \"{}\" enabled", device->getName());
+        spdlog::trace("Device \"{}\" enabled", device->getName());
     }
 }
 
@@ -41,7 +41,7 @@ uint64_t Bus::read(uint64_t address) const
             if (address < deviceSize)
             {
                 uint64_t data = device->read(address);
-                spdlog::debug("Read {:#x} from device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
+                spdlog::trace("Read {:#x} from device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
                 return data;
             }
             address -= deviceSize;
@@ -69,7 +69,7 @@ void Bus::write(uint64_t address, uint64_t data)
             if (address < deviceSize)
             {
                 device->write(address, data);
-                spdlog::debug("Wrote {:#x} to device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
+                spdlog::trace("Wrote {:#x} to device \"{}\" (address range: 0 to {:#x})", data, device->getName(), deviceSize - 1);
                 return;
             }
             address -= deviceSize;
