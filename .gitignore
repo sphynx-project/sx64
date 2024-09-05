@@ -1,0 +1,4 @@
+*.o
+**/build/**
+*sx64*emu*
+**/.vscode/**
