@@ -31,8 +31,14 @@ The first byte of an instruction is the opcode. The rest of the format is determ
 
 Instruction List
 ----------------
-- NOP: Opcode: 0x00, Size: 1
-- HLT: Opcode: 0x01, Size: 1
+- NOP: Opcode: 0x00, Size: 1bytes
+  - Format: <OPCODE (1)>
+- HLT: Opcode: 0x01, Size: 1bytes
+  - Format: <OPCODE (1)>
+- WRITE: Opcode: 0x02, Size: 10bytes
+  - Format: <OPCODE (1)> <REGISTER (1)> <ADDRESS (8)>
+- READ: Opcode: 0x03, Size: 10bytes
+  - Format: <OPCODE (1)> <ADDRESS (8)> <REGISTER (1)>
 
 Startup and Initialization
 --------------------------

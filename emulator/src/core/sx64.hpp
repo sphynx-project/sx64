@@ -5,12 +5,19 @@
 #include <memory>
 #include <core/bus.hpp>
 #include <devices/memory.hpp>
-#include <core/instr.hpp>
 
 #define SX64_ADDR_SYS_BOOTSTRAP 0x0000
 
 namespace sx64
 {
+    enum InstructionType
+    {
+        NOP = 0x0,
+        HLT = 0x1,
+        WRITE = 0x2,
+        READ = 0x3
+    };
+
     class CPU
     {
     private:
@@ -23,7 +30,6 @@ namespace sx64
         bool running;
 
         void fetchInstructions();
-        std::unique_ptr<Instruction> decodeInstruction(uint64_t data);
 
     public:
         CPU();
@@ -32,6 +38,8 @@ namespace sx64
         void halt();
 
         std::shared_ptr<Bus> &getBus();
+        void setRegister(size_t index, uint64_t value);
+        uint64_t getRegister(size_t index) const;
         void dumpState() const;
     };
 }

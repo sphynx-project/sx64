@@ -257,6 +257,8 @@ int main(int argc, char **argv)
     cpu.getBus()->attachDevice(serial_device);
 
     spdlog::debug("Running CPU simulation...");
+    spdlog::debug("Writting {x} ('A') into R0", 'A');
+    cpu.setRegister(0, 'A');
     cpu.run();
     spdlog::debug("CPU simulation finished.");
 

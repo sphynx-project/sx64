@@ -3,8 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <chrono>
 #include <thread>
-#include <instructions/hlt.hpp>
-#include <instructions/nop.hpp>
 
 namespace sx64
 {
@@ -84,10 +82,20 @@ namespace sx64
     {
         spdlog::trace("Fetching instructions from IP {:#016x}", ip);
 
-        uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
-        uint64_t instructionSize = (opcode == static_cast<uint8_t>(InstructionType::NOP) || opcode == static_cast<uint8_t>(InstructionType::HLT)) ? 1 : 8;
-
         uint64_t instructionData = 0;
+        uint64_t instructionSize = 0;
+        uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
+
+        switch (opcode)
+        {
+        case static_cast<uint8_t>(InstructionType::NOP):
+        case static_cast<uint8_t>(InstructionType::HLT):
+            instructionSize = 1;
+            break;
+        default:
+            instructionSize = 8;
+        }
+
         for (size_t i = 0; i < instructionSize; ++i)
         {
             if (ip + i >= bus->getDevices().back()->getBaseAddress() + bus->getDevices().back()->getSize())
@@ -102,34 +110,21 @@ namespace sx64
         spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#016x}",
                       instructionSize, instructionData, ip);
 
-        auto instruction = decodeInstruction(instructionData);
-        if (instruction)
+        uint8_t op = static_cast<uint8_t>(instructionData);
+        switch (op)
         {
-            spdlog::debug("{} @ {:#016x}", instruction->getDecodedString(), ip);
-            instruction->action(*this);
-            ip += instruction->getSize();
-        }
-        else
-        {
+        case static_cast<uint8_t>(InstructionType::NOP):
+            spdlog::debug("NOP @ {:#016x}", ip);
+            ip += 1;
+            break;
+        case static_cast<uint8_t>(InstructionType::HLT):
+            spdlog::debug("HLT @ {:#016x}", ip);
+            halt();
+            break;
+        default:
             spdlog::critical("Unknown instruction at IP {:#016x} ({:#04x})", ip, instructionData);
             halt();
         }
-    }
-
-    std::unique_ptr<Instruction> CPU::decodeInstruction(uint64_t data)
-    {
-        spdlog::trace("Decoding instruction data: {:#016x}", data);
-
-        if (data == static_cast<int>(InstructionType::HLT))
-        {
-            return std::make_unique<HLTInstruction>(data);
-        }
-        else if (data == static_cast<int>(InstructionType::NOP))
-        {
-            return std::make_unique<NOPInstruction>(data);
-        }
-
-        return nullptr;
     }
 
     void CPU::step()
@@ -147,6 +142,24 @@ namespace sx64
     std::shared_ptr<Bus> &CPU::getBus()
     {
         return bus;
+    }
+
+    void CPU::setRegister(size_t index, uint64_t value)
+    {
+        if (index >= r.size())
+        {
+            throw std::out_of_range("Register index out of range");
+        }
+        r[index] = value;
+    }
+
+    uint64_t CPU::getRegister(size_t index) const
+    {
+        if (index >= r.size())
+        {
+            throw std::out_of_range("Register index out of range");
+        }
+        return r[index];
     }
 
     void CPU::dumpState() const
