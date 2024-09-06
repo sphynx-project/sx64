@@ -1,21 +1,19 @@
 #include <spdlog/spdlog.h>
 #include <core/device.hpp>
 
-Device::Device(const std::string &name, bool readOnly)
-    : name(name), enabled(true), readOnly(readOnly)
+Device::Device(const std::string &name, bool readOnly, uint64_t baseAddress)
+    : name(name), enabled(true), baseAddress(baseAddress), readOnly(readOnly)
 {
-    spdlog::trace("Device \"{}\" created (Permissions {})", name, getPermissionStr());
+    spdlog::trace("Device \"{}\" created (Permissions {}, Base Address {:#016x})", name, getPermissionStr(), baseAddress);
 }
 
 void Device::initialize()
 {
-    enabled = true;
     spdlog::trace("Device \"{}\" initialized", name);
 }
 
 void Device::reset()
 {
-    enabled = false;
     spdlog::trace("Device \"{}\" reset", name);
 }
 
@@ -24,15 +22,22 @@ void Device::update()
     spdlog::trace("Device \"{}\" updated", name);
 }
 
-uint64_t Device::read(uint64_t address) const
+uint64_t Device::read([[maybe_unused]] uint64_t address) const
 {
-    spdlog::trace("Device \"{}\" read at address {:#x}", name, address);
+    spdlog::error("Read operation not supported on device \"{}\"", name);
     return 0;
 }
 
-void Device::write(uint64_t address, uint64_t data)
+void Device::write([[maybe_unused]] uint64_t address, [[maybe_unused]] uint64_t data)
 {
-    spdlog::trace("Device \"{}\" write at address {:#x} with data {:#x}", name, address, data);
+    if (readOnly)
+    {
+        spdlog::error("Write operation not supported on read-only device \"{}\"", name);
+    }
+    else
+    {
+        spdlog::error("Write operation not supported on device \"{}\"", name);
+    }
 }
 
 std::string Device::getName() const
@@ -42,7 +47,7 @@ std::string Device::getName() const
 
 std::string Device::getPermissionStr() const
 {
-    return readOnly ? "ro" : "rw";
+    return readOnly ? "Read-Only" : "Read-Write";
 }
 
 bool Device::isEnabled() const
@@ -53,11 +58,19 @@ bool Device::isEnabled() const
 void Device::enable()
 {
     enabled = true;
-    spdlog::trace("Device \"{}\" enabled", name);
 }
 
 void Device::disable()
 {
     enabled = false;
-    spdlog::trace("Device \"{}\" disabled", name);
+}
+
+uint64_t Device::getBaseAddress() const
+{
+    return baseAddress;
+}
+
+bool Device::isReadOnly() const
+{
+    return readOnly;
 }

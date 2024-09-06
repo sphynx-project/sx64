@@ -65,6 +65,38 @@ install_spdlog() {
     esac
 }
 
+install_sdl2() {
+    case $(uname -s) in
+        Linux)
+            if command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
+            elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y SDL2-devel SDL2_ttf-devel
+            elif command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y SDL2-devel SDL2_ttf-devel
+            elif command -v pacman >/dev/null 2>&1; then
+                sudo pacman -S --noconfirm sdl2 sdl2_ttf
+            else
+                echo -e "${COLOR_ERROR}Unsupported package manager or operating system.${COLOR_RESET}"
+                exit 1
+            fi
+            ;;
+        Darwin)
+            if command -v brew >/dev/null 2>&1; then
+                brew install sdl2 sdl2_ttf
+            else
+                echo -e "${COLOR_ERROR}Homebrew not found. Please install Homebrew or manually install SDL2.${COLOR_RESET}"
+                exit 1
+            fi
+            ;;
+        *)
+            echo -e "${COLOR_ERROR}Unsupported operating system.${COLOR_RESET}"
+            exit 1
+            ;;
+    esac
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -B|--rebuild)
@@ -120,6 +152,15 @@ else
     exit 1
 fi
 
+# Check and install SDL2
+if ! pkg-config --exists sdl2; then
+    echo -e "${COLOR_WARN}SDL2 not found. Installing...${COLOR_RESET}"
+    install_sdl2
+fi
+echo -e "${COLOR_INFO}SDL2 installed${COLOR_RESET}"
+INCLUDES+=" $(pkg-config --cflags sdl2 SDL2_ttf)"
+LIBS+=" $(pkg-config --libs sdl2 SDL2_ttf)"
+
 mkdir -p "$OBJ_DIR"
 
 compile_source() {
@@ -158,4 +199,4 @@ if [ -n "$OBJ_FILES" ]; then
     echo -e "${COLOR_INFO}Build complete!${COLOR_RESET} Executable: $EXE"
 else
     echo -e "${COLOR_ERROR}No object files found for linking.${COLOR_RESET}"
-fi      
+fi

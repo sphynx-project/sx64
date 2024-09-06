@@ -1,8 +1,8 @@
+#include <global.hpp>
 #include <core/sx64.hpp>
 #include <spdlog/spdlog.h>
-#include <global.hpp>
-
-// Instructions
+#include <chrono>
+#include <thread>
 #include <instructions/hlt.hpp>
 #include <instructions/nop.hpp>
 
@@ -16,16 +16,68 @@ namespace sx64
 
     void CPU::run()
     {
-        spdlog::info("sx64: Starting CPU execution...");
+        spdlog::debug("sx64: Starting CPU execution...");
         bus->enable();
         running = true;
 
+        auto targetCycleDuration = std::chrono::microseconds(1);
+        auto cycleStart = std::chrono::high_resolution_clock::now();
+
+        uint64_t cycleCount = 0;
+        uint64_t totalElapsedTime = 0;
+
         while (running)
         {
+            auto cycleBegin = std::chrono::high_resolution_clock::now();
+
+            spdlog::trace("Cycle {} Start: IP = {:#018x}, SP = {:#018x}, SB = {:#018x}, FR = {:#06x}",
+                          cycleCount + 1, ip, sp, sb, fr);
+
             step();
+
+            auto cycleEnd = std::chrono::high_resolution_clock::now();
+            auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleBegin);
+
+            totalElapsedTime += elapsedTime.count();
+            cycleCount++;
+
+            auto cycleDuration = std::chrono::high_resolution_clock::now() - cycleStart;
+            auto remainingTime = targetCycleDuration - cycleDuration;
+            cycleStart = std::chrono::high_resolution_clock::now();
+
+            if (remainingTime > std::chrono::microseconds(0))
+            {
+                std::this_thread::sleep_for(remainingTime);
+            }
+            else
+            {
+                spdlog::trace("Running behind schedule; no sleep.");
+                cycleStart = std::chrono::high_resolution_clock::now();
+            }
+
+            spdlog::trace("Cycle {} End: Cycle duration: {} µs, Target duration: {} µs",
+                          cycleCount, elapsedTime.count(), targetCycleDuration.count());
+
+            if (cycleCount % 1000 == 0)
+            {
+                double averageCycleDuration = static_cast<double>(totalElapsedTime) / cycleCount;
+                double performance = (targetCycleDuration.count() / averageCycleDuration) * 100.0;
+                spdlog::debug("CPU Performance: {:.2f}%", performance);
+            }
+            spdlog::trace("-------------------------");
         }
 
-        spdlog::info("sx64: CPU execution finished");
+        if (cycleCount > 0)
+        {
+            double averageCycleDuration = static_cast<double>(totalElapsedTime) / cycleCount;
+            double performance = (targetCycleDuration.count() / averageCycleDuration) * 100.0;
+            spdlog::debug("sx64: CPU execution finished");
+            spdlog::debug("Final CPU Performance: {:.2f}% ({} cycles)", performance, cycleCount);
+        }
+        else
+        {
+            spdlog::debug("sx64: CPU execution finished with no cycles run.");
+        }
     }
 
     void CPU::fetchInstructions()
@@ -33,23 +85,12 @@ namespace sx64
         spdlog::trace("Fetching instructions from IP {:#016x}", ip);
 
         uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
-        uint64_t instructionSize = 0;
-
-        switch (opcode)
-        {
-        case static_cast<uint8_t>(InstructionType::NOP):
-        case static_cast<uint8_t>(InstructionType::HLT):
-            instructionSize = 1;
-            break;
-        default:
-            instructionSize = 8;
-            break;
-        }
+        uint64_t instructionSize = (opcode == static_cast<uint8_t>(InstructionType::NOP) || opcode == static_cast<uint8_t>(InstructionType::HLT)) ? 1 : 8;
 
         uint64_t instructionData = 0;
         for (size_t i = 0; i < instructionSize; ++i)
         {
-            if (ip + i >= bus->getDevices().back()->getSize())
+            if (ip + i >= bus->getDevices().back()->getBaseAddress() + bus->getDevices().back()->getSize())
             {
                 spdlog::error("Instruction read out of bounds at IP {:#016x}", ip + i);
                 halt();
@@ -58,7 +99,8 @@ namespace sx64
             instructionData |= (bus->read(ip + i) << (i * 8));
         }
 
-        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#016x}", instructionSize, instructionData, ip);
+        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#016x}",
+                      instructionSize, instructionData, ip);
 
         auto instruction = decodeInstruction(instructionData);
         if (instruction)
@@ -98,7 +140,7 @@ namespace sx64
 
     void CPU::halt()
     {
-        spdlog::warn("CPU halt requested");
+        spdlog::debug("CPU halt requested");
         running = false;
     }
 
@@ -122,16 +164,11 @@ namespace sx64
 
         spdlog::debug("Memory Layout:");
 
-        uint64_t startAddress = 0;
         for (const auto &device : bus->getDevices())
         {
+            uint64_t baseAddress = device->getBaseAddress();
             uint64_t size = device->getSize();
-            uint64_t endAddress = startAddress + size - 1;
-
-            if (size == 0)
-            {
-                endAddress = startAddress;
-            }
+            uint64_t endAddress = baseAddress + size - 1;
 
             std::string sizeStr;
 
@@ -145,14 +182,11 @@ namespace sx64
                 sizeStr = fmt::format("{} B", size);
 
             spdlog::debug(" - {:#018x} -> {:#018x} ({}) {} : {}",
-                          startAddress,
+                          baseAddress,
                           endAddress,
                           sizeStr,
                           device->getPermissionStr(),
                           device->getName());
-
-            startAddress = endAddress;
         }
     }
-
 }

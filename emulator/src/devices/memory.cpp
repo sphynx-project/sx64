@@ -1,29 +1,56 @@
-#include <spdlog/spdlog.h>
 #include <devices/memory.hpp>
+#include <spdlog/spdlog.h>
+#include <cstring>
+#include <vector>
 
-MemoryDevice::MemoryDevice(const std::string &name, uint64_t size, bool readOnly)
-    : Device(name, readOnly), memory(size, 0), size(size), readOnly(readOnly)
+MemoryDevice::MemoryDevice(const std::string &name, uint64_t size, bool readOnly, uint64_t baseAddress)
+    : Device(name, readOnly, baseAddress), memory(size / sizeof(uint64_t), 0), size(size)
 {
-    spdlog::trace("MemoryDevice \"{}\" created with size {} bytes (Permissions: {})", name, size, getPermissionStr());
-}
-
-MemoryDevice::MemoryDevice(const std::string &name, uint64_t size, bool readOnly, const uint8_t *initBuffer, size_t bufferSize)
-    : Device(name), memory(size, 0), size(size), readOnly(readOnly)
-{
-    spdlog::trace("MemoryDevice \"{}\" created with size {} bytes and initialization buffer", name, size);
-    initializeWithBuffer(initBuffer, bufferSize);
-}
-
-MemoryDevice::~MemoryDevice()
-{
-    spdlog::trace("MemoryDevice \"{}\" destroyed", getName());
+    spdlog::trace("MemoryDevice \"{}\" created with size {:#x} bytes", name, size);
 }
 
 void MemoryDevice::initialize()
 {
-    std::fill(memory.begin(), memory.end(), 0);
     Device::initialize();
-    spdlog::trace("MemoryDevice \"{}\" initialized with zeros", getName());
+    std::fill(memory.begin(), memory.end(), 0);
+}
+
+void MemoryDevice::reset()
+{
+    Device::reset();
+    std::fill(memory.begin(), memory.end(), 0);
+}
+
+void MemoryDevice::update()
+{
+    Device::update();
+}
+
+uint64_t MemoryDevice::read(uint64_t address) const
+{
+    if (address < memory.size() * sizeof(uint64_t))
+    {
+        return memory[address / sizeof(uint64_t)];
+    }
+    spdlog::error("Read out of bounds in MemoryDevice \"{}\"", getName());
+    return 0;
+}
+
+void MemoryDevice::write(uint64_t address, uint64_t data)
+{
+    if (!isReadOnly() && address < memory.size() * sizeof(uint64_t))
+    {
+        memory[address / sizeof(uint64_t)] = data;
+    }
+    else
+    {
+        spdlog::error("Write out of bounds or to read-only memory in MemoryDevice \"{}\"", getName());
+    }
+}
+
+uint64_t MemoryDevice::getSize() const
+{
+    return memory.size() * sizeof(uint64_t);
 }
 
 void MemoryDevice::initializeWithBuffer(const uint8_t *initBuffer, size_t bufferSize)
@@ -39,37 +66,4 @@ void MemoryDevice::initializeWithBuffer(const uint8_t *initBuffer, size_t buffer
     {
         spdlog::warn("MemoryDevice \"{}\" initialization buffer is null or buffer size is zero", getName());
     }
-}
-
-uint64_t MemoryDevice::read(uint64_t address) const
-{
-    if (address < size)
-    {
-        uint64_t data = memory[address];
-        spdlog::trace("MemoryDevice \"{}\" read at address {:#016x} with data {:#016x}", getName(), address, data);
-        return data;
-    }
-    spdlog::warn("MemoryDevice \"{}\" read out of bounds at address {:#016x}", getName(), address);
-    return 0;
-}
-
-void MemoryDevice::write(uint64_t address, uint64_t data)
-{
-    if (!readOnly && address < size)
-    {
-        memory[address] = static_cast<uint8_t>(data & 0xFF);
-        spdlog::trace("MemoryDevice \"{}\" wrote {:#016x} at address {:#016x}", getName(), data, address);
-    }
-    else
-    {
-        if (readOnly)
-            spdlog::warn("MemoryDevice \"{}\" is read-only, trying to write to address {:#016x}", getName(), address);
-        else
-            spdlog::warn("MemoryDevice \"{}\" write out of bounds at address {:#016x}", getName(), address);
-    }
-}
-
-uint64_t MemoryDevice::getSize() const
-{
-    return size;
 }

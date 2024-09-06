@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <global.hpp>
+#include <devices/serial.hpp>
 
 sx64::CPU cpu;
 sx64::CPU &g_cpu = cpu;
@@ -32,7 +33,7 @@ void print_help()
 void print_version()
 {
     std::cout << program_version << "\n"
-              << "Copyright © Kevin Alavik (shittydev.com) <kevin@alavik.se> <kevin@shittydev.com>\n"
+              << "Copyright © Kevin Alavik (shittydev.com) <kevin@alavik.se>\n"
               << "The sx64 CPU design and emulator is part of the Sphynx Projects / OS, a continuing development by Kevin Alavik.\n"
               << "For additional details, visit github.com/sphynxos or sphynx.shittydev.com.\n";
 }
@@ -185,7 +186,7 @@ int main(int argc, char **argv)
     sx64::CPU cpu;
     g_cpu = cpu;
 
-    auto sys_bootstrap_mem = std::make_shared<MemoryDevice>("sys-bootstrap", 0x1000, true);
+    auto sys_bootstrap_mem = std::make_shared<MemoryDevice>("sys-bootstrap", 0x1000, true, SX64_ADDR_SYS_BOOTSTRAP);
     cpu.getBus()->attachDevice(sys_bootstrap_mem);
     spdlog::debug("System bootstrap memory device attached: 4096 bytes");
 
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    auto ram_mem = std::make_shared<MemoryDevice>("Generic (RAM)", ram_size, false);
+    auto ram_mem = std::make_shared<MemoryDevice>("Generic (RAM)", ram_size, false, sys_bootstrap_mem->getBaseAddress() + sys_bootstrap_mem->getSize());
     cpu.getBus()->attachDevice(ram_mem);
     spdlog::trace("RAM memory device attached: {} bytes", ram_size);
 
@@ -251,6 +252,9 @@ int main(int argc, char **argv)
         spdlog::debug("No kernel bootstrap image provided, initializing RAM with zeros");
         ram_mem->initialize();
     }
+
+    auto serial_device = std::make_shared<SerialDevice>("sx64 Serial", 800, 600, ram_mem->getBaseAddress() + ram_mem->getSize());
+    cpu.getBus()->attachDevice(serial_device);
 
     spdlog::debug("Running CPU simulation...");
     cpu.run();

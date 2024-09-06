@@ -14,8 +14,7 @@ public:
     void attachDevice(std::shared_ptr<Device> device);
     uint64_t read(uint64_t address) const;
     void write(uint64_t address, uint64_t data);
-
-    const std::vector<std::shared_ptr<Device>>& getDevices() const;
+    const std::vector<std::shared_ptr<Device>> &getDevices() const;
     void enable();
 
 private:

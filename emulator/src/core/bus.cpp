@@ -15,7 +15,7 @@ Bus::~Bus()
 void Bus::attachDevice(std::shared_ptr<Device> device)
 {
     devices.push_back(device);
-    spdlog::trace("Device \"{}\" attached to bus", device->getName());
+    spdlog::trace("Device \"{}\" attached to bus at base address {:#016x}", device->getName(), device->getBaseAddress());
     device->initialize();
     device->enable();
 }
@@ -35,20 +35,21 @@ uint64_t Bus::read(uint64_t address) const
 
     for (const auto &device : devices)
     {
-        if (device->isEnabled())
+        uint64_t deviceBaseAddress = device->getBaseAddress();
+        uint64_t deviceSize = device->getSize();
+        if (address >= deviceBaseAddress && address < deviceBaseAddress + deviceSize)
         {
-            uint64_t deviceSize = device->getSize();
-            if (address < deviceSize)
+            if (device->isEnabled())
             {
-                uint64_t data = device->read(address);
+                uint64_t offset = address - deviceBaseAddress;
+                uint64_t data = device->read(offset);
                 spdlog::trace("Read {:#x} from device \"{}\"", data, device->getName());
                 return data;
             }
-            address -= deviceSize;
-        }
-        else
-        {
-            spdlog::debug("Device \"{}\" is disabled", device->getName());
+            else
+            {
+                spdlog::debug("Device \"{}\" is disabled", device->getName());
+            }
         }
     }
 
@@ -63,20 +64,21 @@ void Bus::write(uint64_t address, uint64_t data)
 
     for (const auto &device : devices)
     {
-        if (device->isEnabled())
+        uint64_t deviceBaseAddress = device->getBaseAddress();
+        uint64_t deviceSize = device->getSize();
+        if (address >= deviceBaseAddress && address < deviceBaseAddress + deviceSize)
         {
-            uint64_t deviceSize = device->getSize();
-            if (address < deviceSize)
+            if (device->isEnabled())
             {
-                device->write(address, data);
+                uint64_t offset = address - deviceBaseAddress;
+                device->write(offset, data);
                 spdlog::trace("Wrote {:#x} to device \"{}\"", data, device->getName());
                 return;
             }
-            address -= deviceSize;
-        }
-        else
-        {
-            spdlog::debug("Device \"{}\" is disabled", device->getName());
+            else
+            {
+                spdlog::debug("Device \"{}\" is disabled", device->getName());
+            }
         }
     }
 
