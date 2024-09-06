@@ -1,8 +1,7 @@
 #include <global.hpp>
 #include <core/sx64.hpp>
 #include <spdlog/spdlog.h>
-#include <chrono>
-#include <thread>
+#include <stdexcept>
 
 namespace sx64
 {
@@ -14,7 +13,7 @@ namespace sx64
 
     void CPU::run()
     {
-        spdlog::debug("sx64: Starting CPU execution...");
+        spdlog::info("sx64: Starting CPU execution...");
         bus->enable();
         running = true;
 
@@ -69,8 +68,8 @@ namespace sx64
         {
             double averageCycleDuration = static_cast<double>(totalElapsedTime) / cycleCount;
             double performance = (targetCycleDuration.count() / averageCycleDuration) * 100.0;
-            spdlog::debug("sx64: CPU execution finished");
-            spdlog::debug("Final CPU Performance: {:.2f}% ({} cycles)", performance, cycleCount);
+            spdlog::info("sx64: CPU execution finished");
+            spdlog::info("Final CPU Performance: {:.2f}% ({} cycles)", performance, cycleCount);
         }
         else
         {
@@ -82,48 +81,80 @@ namespace sx64
     {
         spdlog::trace("Fetching instructions from IP {:#016x}", ip);
 
-        uint64_t instructionData = 0;
-        uint64_t instructionSize = 0;
         uint8_t opcode = static_cast<uint8_t>(bus->read(ip));
+        ip += 1;
 
         switch (opcode)
         {
         case static_cast<uint8_t>(InstructionType::NOP):
-        case static_cast<uint8_t>(InstructionType::HLT):
-            instructionSize = 1;
-            break;
-        default:
-            instructionSize = 8;
-        }
-
-        for (size_t i = 0; i < instructionSize; ++i)
-        {
-            if (ip + i >= bus->getDevices().back()->getBaseAddress() + bus->getDevices().back()->getSize())
-            {
-                spdlog::error("Instruction read out of bounds at IP {:#016x}", ip + i);
-                halt();
-                return;
-            }
-            instructionData |= (bus->read(ip + i) << (i * 8));
-        }
-
-        spdlog::trace("Fetched {}-byte instruction {:#016x} from address {:#016x}",
-                      instructionSize, instructionData, ip);
-
-        uint8_t op = static_cast<uint8_t>(instructionData);
-        switch (op)
-        {
-        case static_cast<uint8_t>(InstructionType::NOP):
             spdlog::debug("NOP @ {:#016x}", ip);
-            ip += 1;
             break;
+
         case static_cast<uint8_t>(InstructionType::HLT):
             spdlog::debug("HLT @ {:#016x}", ip);
             halt();
             break;
+
+        case static_cast<uint8_t>(InstructionType::WRITE):
+        {
+            uint8_t regIn = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+
+            uint64_t address = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                address |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip += 8;
+
+            uint64_t valueToWrite = getRegister(regIn);
+            spdlog::debug("WRITE @ {:#016x}, Register R{} = {:#018x}", address, regIn, valueToWrite);
+            bus->write(address, static_cast<uint8_t>(valueToWrite));
+
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::READ):
+        {
+            uint8_t regOut = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+
+            uint64_t address = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                address |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip += 8;
+
+            uint8_t valueRead = bus->read(address);
+            setRegister(regOut, valueRead);
+            spdlog::debug("READ @ {:#016x}, Register R{} = {:#018x}", address, regOut, valueRead);
+
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::LDI):
+        {
+            uint8_t regOut = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+
+            uint64_t immediateValue = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                immediateValue |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip += 8;
+
+            setRegister(regOut, immediateValue);
+            spdlog::debug("LDI @ {:#016x}, Register R{} = {:#018x}", ip, regOut, immediateValue);
+
+            break;
+        }
+
         default:
-            spdlog::critical("Unknown instruction at IP {:#016x} ({:#04x})", ip, instructionData);
+            spdlog::critical("Unknown instruction at IP {:#016x} ({:#04x})", ip, opcode);
             halt();
+            break;
         }
     }
 

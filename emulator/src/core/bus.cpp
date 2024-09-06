@@ -29,7 +29,7 @@ void Bus::enable()
     }
 }
 
-uint64_t Bus::read(uint64_t address) const
+uint8_t Bus::read(uint64_t address) const
 {
     spdlog::trace("Bus read at address {:#016x}", address);
 
@@ -58,7 +58,7 @@ uint64_t Bus::read(uint64_t address) const
     return 0;
 }
 
-void Bus::write(uint64_t address, uint64_t data)
+void Bus::write(uint64_t address, uint8_t data)
 {
     spdlog::trace("Bus write at address {:#016x} with data {:#016x}", address, data);
 

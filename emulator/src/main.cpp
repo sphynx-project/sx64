@@ -10,6 +10,7 @@
 
 #include <global.hpp>
 #include <devices/serial.hpp>
+#include <devices/memory.hpp>
 
 sx64::CPU cpu;
 sx64::CPU &g_cpu = cpu;
@@ -183,9 +184,6 @@ int main(int argc, char **argv)
 
     spdlog::debug("Starting sx64 Emulator...");
 
-    sx64::CPU cpu;
-    g_cpu = cpu;
-
     auto sys_bootstrap_mem = std::make_shared<MemoryDevice>("sys-bootstrap", 0x1000, true, SX64_ADDR_SYS_BOOTSTRAP);
     cpu.getBus()->attachDevice(sys_bootstrap_mem);
     spdlog::debug("System bootstrap memory device attached: 4096 bytes");
@@ -257,7 +255,7 @@ int main(int argc, char **argv)
     cpu.getBus()->attachDevice(serial_device);
 
     spdlog::debug("Running CPU simulation...");
-    spdlog::debug("Writting {x} ('A') into R0", 'A');
+    spdlog::debug("Writing {:#x} ('A') into R0", 'A');
     cpu.setRegister(0, 'A');
     cpu.run();
     spdlog::debug("CPU simulation finished.");

@@ -22,13 +22,13 @@ void Device::update()
     spdlog::trace("Device \"{}\" updated", name);
 }
 
-uint64_t Device::read([[maybe_unused]] uint64_t address) const
+uint8_t Device::read([[maybe_unused]] uint64_t address) const
 {
     spdlog::error("Read operation not supported on device \"{}\"", name);
     return 0;
 }
 
-void Device::write([[maybe_unused]] uint64_t address, [[maybe_unused]] uint64_t data)
+void Device::write([[maybe_unused]] uint64_t address, [[maybe_unused]] uint8_t data)
 {
     if (readOnly)
     {

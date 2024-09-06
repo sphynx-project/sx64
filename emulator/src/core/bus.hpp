@@ -12,8 +12,8 @@ public:
     ~Bus();
 
     void attachDevice(std::shared_ptr<Device> device);
-    uint64_t read(uint64_t address) const;
-    void write(uint64_t address, uint64_t data);
+    uint8_t read(uint64_t address) const;
+    void write(uint64_t address, uint8_t data);
     const std::vector<std::shared_ptr<Device>> &getDevices() const;
     void enable();
 

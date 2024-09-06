@@ -14,7 +14,7 @@ public:
 
     void initialize() override;
     void update() override;
-    void write(uint64_t address, uint64_t data) override;
+    void write(uint64_t address, uint8_t data) override;
 
     uint64_t getSize() const override;
 

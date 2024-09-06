@@ -12,12 +12,12 @@ public:
     void initialize() override;
     void reset() override;
     void update() override;
-    uint64_t read(uint64_t address) const override;
-    void write(uint64_t address, uint64_t data) override;
+    uint8_t read(uint64_t address) const override;
+    void write(uint64_t address, uint8_t data) override;
     uint64_t getSize() const override;
     void initializeWithBuffer(const uint8_t *buffer, uint64_t size);
 
 private:
-    std::vector<uint64_t> memory;
+    std::vector<uint8_t> memory;
     uint64_t size;
 };

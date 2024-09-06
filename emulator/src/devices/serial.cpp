@@ -136,7 +136,7 @@ void SerialDevice::update()
     spdlog::trace("Display updated");
 }
 
-void SerialDevice::write(uint64_t address, uint64_t data)
+void SerialDevice::write(uint64_t address, uint8_t data)
 {
     spdlog::debug("Writing data: {} at address: {}", data, address);
 

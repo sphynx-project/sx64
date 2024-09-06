@@ -17,6 +17,7 @@ The **sx64 Emulator** is an implementation of the sx64 CPU architecture, designe
 
 - C++11 or later
 - [spdlog](https://github.com/gabime/spdlog) for logging, installed by the build script if you are on supported OS.
+- [SDL2]() for serial monitor, installed by the build script if you are on supported OS.
 
 ### Building
 
@@ -40,14 +41,9 @@ To run the emulator with premade BIOS (sys-bootstrap) and boot img (krnl-bootstr
 ```bash
 ./sx64-generic-emu -bi ../bios.img -ri ../boot.img
 ```
-*The BIOS is just 4KB of pure 0s (NOP instructions) and the boot.img is a single HLT instruction, so expected output is a halt at IP 0x0000000000001000*
+*The BIOS is just 4KB of pure 0s (NOP instructions) and the boot.img is a simple hello message to the serial monitor.*
 
 The emulator will initialize and start executing instructions. You can view detailed logs of CPU operations and memory interactions. To see debug messages simply add the *-v* flag or *-vv* for extra debug messages.
-
-## Instruction Set
-
-- **NOP:** No operation. Opcode: `0x00`, Size: 1 byte.
-- **HLT:** Halt execution. Opcode: `0x01`, Size: 1 byte.
 
 ## Architecture
 

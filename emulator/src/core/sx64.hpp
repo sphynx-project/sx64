@@ -15,7 +15,8 @@ namespace sx64
         NOP = 0x0,
         HLT = 0x1,
         WRITE = 0x2,
-        READ = 0x3
+        READ = 0x3,
+        LDI = 0x4
     };
 
     class CPU
