@@ -2,79 +2,31 @@
 #include <core/sx64.hpp>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
+#include <chrono>
+#include <thread>
+#include <memory>
 
 namespace sx64
 {
     CPU::CPU()
-        : r(8, 0), sb(0), sp(0), ip(SX64_ADDR_SYS_BOOTSTRAP), fr(0), bus(std::make_shared<Bus>()), running(false)
+        : r(8, 0), sb(0), sp(0), ip(SX64_ADDR_SYS_BOOTSTRAP), fr(0), bus(std::make_shared<Bus>()), running(false), lastStepTime(std::chrono::steady_clock::now())
     {
         spdlog::trace("CPU initialized with IP: {:#016x}", ip);
     }
 
-    void CPU::run()
+    void CPU::setFlag(Flag flag)
     {
-        spdlog::info("sx64: Starting CPU execution...");
-        bus->enable();
-        running = true;
+        fr |= flag;
+    }
 
-        auto targetCycleDuration = std::chrono::microseconds(1);
-        auto cycleStart = std::chrono::high_resolution_clock::now();
+    void CPU::clearFlag(Flag flag)
+    {
+        fr &= ~flag;
+    }
 
-        uint64_t cycleCount = 0;
-        uint64_t totalElapsedTime = 0;
-
-        while (running)
-        {
-            auto cycleBegin = std::chrono::high_resolution_clock::now();
-
-            spdlog::trace("Cycle {} Start: IP = {:#018x}, SP = {:#018x}, SB = {:#018x}, FR = {:#06x}",
-                          cycleCount + 1, ip, sp, sb, fr);
-
-            step();
-
-            auto cycleEnd = std::chrono::high_resolution_clock::now();
-            auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleBegin);
-
-            totalElapsedTime += elapsedTime.count();
-            cycleCount++;
-
-            auto cycleDuration = std::chrono::high_resolution_clock::now() - cycleStart;
-            auto remainingTime = targetCycleDuration - cycleDuration;
-            cycleStart = std::chrono::high_resolution_clock::now();
-
-            if (remainingTime > std::chrono::microseconds(0))
-            {
-                std::this_thread::sleep_for(remainingTime);
-            }
-            else
-            {
-                spdlog::trace("Running behind schedule; no sleep.");
-                cycleStart = std::chrono::high_resolution_clock::now();
-            }
-
-            spdlog::trace("Cycle {} End: Cycle duration: {} µs, Target duration: {} µs",
-                          cycleCount, elapsedTime.count(), targetCycleDuration.count());
-
-            if (cycleCount % 1000 == 0)
-            {
-                double averageCycleDuration = static_cast<double>(totalElapsedTime) / cycleCount;
-                double performance = (targetCycleDuration.count() / averageCycleDuration) * 100.0;
-                spdlog::debug("CPU Performance: {:.2f}%", performance);
-            }
-            spdlog::trace("-------------------------");
-        }
-
-        if (cycleCount > 0)
-        {
-            double averageCycleDuration = static_cast<double>(totalElapsedTime) / cycleCount;
-            double performance = (targetCycleDuration.count() / averageCycleDuration) * 100.0;
-            spdlog::info("sx64: CPU execution finished");
-            spdlog::info("Final CPU Performance: {:.2f}% ({} cycles)", performance, cycleCount);
-        }
-        else
-        {
-            spdlog::debug("sx64: CPU execution finished with no cycles run.");
-        }
+    bool CPU::isFlagSet(Flag flag) const
+    {
+        return (fr & flag) != 0;
     }
 
     void CPU::fetchInstructions()
@@ -151,6 +103,231 @@ namespace sx64
             break;
         }
 
+        case static_cast<uint8_t>(InstructionType::ADD):
+        {
+            uint8_t dest = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint8_t src = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint64_t result = r[dest] + r[src];
+            r[dest] = result;
+
+            if (result == 0)
+            {
+                setFlag(ZERO);
+            }
+            else
+            {
+                clearFlag(ZERO);
+            }
+
+            if (static_cast<int64_t>(result) < 0)
+            {
+                setFlag(NEGATIVE);
+            }
+            else
+            {
+                clearFlag(NEGATIVE);
+            }
+
+            spdlog::debug("ADD R{} += R{} -> {:#018x}", dest, src, r[dest]);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::SUB):
+        {
+            uint8_t dest = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint8_t src = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint64_t result = r[dest] - r[src];
+            r[dest] = result;
+
+            if (result == 0)
+            {
+                setFlag(ZERO);
+            }
+            else
+            {
+                clearFlag(ZERO);
+            }
+
+            if (static_cast<int64_t>(result) < 0)
+            {
+                setFlag(NEGATIVE);
+            }
+            else
+            {
+                clearFlag(NEGATIVE);
+            }
+
+            spdlog::debug("SUB R{} -= R{} -> {:#018x}", dest, src, r[dest]);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::MUL):
+        {
+            uint8_t dest = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint8_t src = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint64_t result = r[dest] * r[src];
+            r[dest] = result;
+
+            if (result == 0)
+            {
+                setFlag(ZERO);
+            }
+            else
+            {
+                clearFlag(ZERO);
+            }
+
+            if (static_cast<int64_t>(result) < 0)
+            {
+                setFlag(NEGATIVE);
+            }
+            else
+            {
+                clearFlag(NEGATIVE);
+            }
+
+            spdlog::debug("MUL R{} *= R{} -> {:#018x}", dest, src, r[dest]);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::DIV):
+        {
+            uint8_t dest = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint8_t src = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+
+            if (r[src] != 0)
+            {
+                uint64_t result = r[dest] / r[src];
+                r[dest] = result;
+
+                if (result == 0)
+                {
+                    setFlag(ZERO);
+                }
+                else
+                {
+                    clearFlag(ZERO);
+                }
+
+                if (static_cast<int64_t>(result) < 0)
+                {
+                    setFlag(NEGATIVE);
+                }
+                else
+                {
+                    clearFlag(NEGATIVE);
+                }
+
+                spdlog::debug("DIV R{} /= R{} -> {:#018x}", dest, src, r[dest]);
+            }
+            else
+            {
+                spdlog::critical("Division by zero @ {:#016x}", ip);
+                halt();
+            }
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::PUSH):
+        {
+            uint8_t reg = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            sp -= 8;
+            bus->write(sp, static_cast<uint8_t>(r[reg]));
+            spdlog::debug("PUSH R{} -> Stack @ {:#018x}", reg, sp);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::POP):
+        {
+            uint8_t reg = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            r[reg] = bus->read(sp);
+            sp += 8;
+            spdlog::debug("POP Stack -> R{} = {:#018x}", reg, r[reg]);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::JMP):
+        {
+            uint64_t address = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                address |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip = address;
+            spdlog::debug("JMP -> {:#018x}", ip);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::CMP):
+        {
+            uint8_t reg1 = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            uint8_t reg2 = static_cast<uint8_t>(bus->read(ip));
+            ip += 1;
+            if (r[reg1] == r[reg2])
+            {
+                setFlag(ZERO);
+            }
+            else
+            {
+                clearFlag(ZERO);
+            }
+
+            if (static_cast<int64_t>(r[reg1] - r[reg2]) < 0)
+            {
+                setFlag(NEGATIVE);
+            }
+            else
+            {
+                clearFlag(NEGATIVE);
+            }
+
+            spdlog::debug("CMP R{} == R{} -> FR = {}", reg1, reg2, fr);
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::JE):
+        {
+            uint64_t address = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                address |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip += 8;
+            if (isFlagSet(ZERO))
+            {
+                ip = address;
+                spdlog::debug("JE -> {:#018x}", ip);
+            }
+            break;
+        }
+
+        case static_cast<uint8_t>(InstructionType::JNE):
+        {
+            uint64_t address = 0;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                address |= static_cast<uint64_t>(bus->read(ip + i)) << (i * 8);
+            }
+            ip += 8;
+            if (!isFlagSet(ZERO))
+            {
+                ip = address;
+                spdlog::debug("JNE -> {:#018x}", ip);
+            }
+            break;
+        }
+
         default:
             spdlog::critical("Unknown instruction at IP {:#016x} ({:#04x})", ip, opcode);
             halt();
@@ -162,6 +339,31 @@ namespace sx64
     {
         spdlog::trace("CPU stepping. Current IP: {:#016x}", ip);
         fetchInstructions();
+    }
+
+    void CPU::run()
+    {
+        using namespace std::chrono;
+
+        running = true;
+        constexpr int64_t targetTimePerCycle = 1000000 / 1000000; // 1 MHz clock speed
+
+        while (running)
+        {
+            auto start = steady_clock::now();
+            step();
+            auto end = steady_clock::now();
+
+            auto stepDuration = duration_cast<microseconds>(end - start).count();
+            int64_t sleepDuration = targetTimePerCycle - stepDuration;
+
+            if (sleepDuration > 0)
+            {
+                std::this_thread::sleep_for(microseconds(sleepDuration));
+            }
+
+            spdlog::trace("Step completed in {} microseconds. Sleeping for {} microseconds to maintain 1 MHz.", stepDuration, sleepDuration > 0 ? sleepDuration : 0);
+        }
     }
 
     void CPU::halt()
@@ -199,12 +401,12 @@ namespace sx64
         spdlog::debug("Registers:");
         for (size_t i = 0; i < r.size(); ++i)
         {
-            spdlog::debug("  R{}: {:#018x}", i, r[i]);
+            spdlog::debug("  R{}: {:#018x} ({})", i, r[i], r[i]);
         }
-        spdlog::debug("SB: {:#018x}", sb);
-        spdlog::debug("SP: {:#018x}", sp);
-        spdlog::debug("IP: {:#018x}", ip);
-        spdlog::debug("FR: {:#06x}", fr);
+        spdlog::debug("SB: {:#018x} ({})", sb, sb);
+        spdlog::debug("SP: {:#018x} ({})", sp, sp);
+        spdlog::debug("IP: {:#018x} ({})", ip, ip);
+        spdlog::debug("FR: {:#06x} ({})", fr, fr);
 
         spdlog::debug("Memory Layout:");
 

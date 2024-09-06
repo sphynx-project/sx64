@@ -8,7 +8,17 @@ OPCODES = {
     "HLT": 0x01,
     "WRITE": 0x02,
     "READ": 0x03,
-    "LDI": 0x04
+    "LDI": 0x04,
+    "ADD": 0x05,
+    "SUB": 0x06,
+    "MUL": 0x07,
+    "DIV": 0x08,
+    "PUSH": 0x09,
+    "POP": 0x0A,
+    "JMP": 0x0B,
+    "CMP": 0x0C,
+    "JE": 0x0D,
+    "JNE": 0x0E
 }
 
 # Register to index mapping
@@ -43,7 +53,7 @@ class Lexer:
             self.current_char = None
         else:
             self.current_char = self.source[self.position]
-
+    
     def skip_whitespace(self):
         while self.current_char is not None and self.current_char.isspace():
             self.advance()
@@ -52,10 +62,16 @@ class Lexer:
         tokens = []
         while self.current_char is not None:
             if self.current_char.isspace():
+                if self.current_char == '\n':
+                    tokens.append(Token('NEWLINE', '\n'))
                 self.skip_whitespace()
                 continue
             if self.current_char == ',':
                 tokens.append(Token('COMMA', ','))
+                self.advance()
+                continue
+            if self.current_char == ':':
+                tokens.append(Token('COLON', ':'))
                 self.advance()
                 continue
             if self.current_char.isalpha():
@@ -132,6 +148,7 @@ class Assembler:
     def __init__(self, tokens):
         self.tokens = tokens
         self.index = 0
+        self.address = 0
 
     def current_token(self):
         if self.index < len(self.tokens):
@@ -150,58 +167,65 @@ class Assembler:
     def parse(self):
         output_bytes = bytearray()
         while self.index < len(self.tokens):
-            op = self.eat('KEYWORD').value
-            if op not in OPCODES:
-                raise ValueError(f"Unknown instruction '{op}'")
+            token = self.current_token()
+            if token.type == 'KEYWORD':
+                op = self.eat('KEYWORD').value
+                if op not in OPCODES:
+                    raise ValueError(f"Unknown instruction '{op}'")
+                output_bytes.append(OPCODES[op])  # Write opcode
 
-            output_bytes.append(OPCODES[op])  # Write opcode
+                if op in ["WRITE", "READ"]:
+                    self.handle_register_operand(output_bytes)
+                    self.handle_address_operand(output_bytes)
 
-            if op in ["WRITE", "READ"]:
-                if self.current_token().type != 'REGISTER':
-                    raise ValueError(f"Instruction '{op}' requires a register but got {self.current_token().type} with value {self.current_token().value}")
-                reg = self.eat('REGISTER').value
-                if reg not in REGISTER_INDEX:
-                    raise ValueError(f"Unknown register '{reg}'")
+                elif op == "LDI":
+                    self.handle_register_operand(output_bytes)
+                    self.handle_immediate_operand(output_bytes)
 
-                output_bytes.append(REGISTER_INDEX[reg])  # Write register index
+                elif op in ["NOP", "HLT"]:
+                    pass  # No additional operands
 
-                if self.current_token().type == 'COMMA':
-                    self.eat('COMMA')  # Skip the comma
-                else:
-                    raise ValueError(f"Expected comma after register but got {self.current_token().type} with value {self.current_token().value}")
+                elif op in ["ADD", "SUB", "MUL", "DIV"]:
+                    self.handle_register_operand(output_bytes)
+                    self.handle_register_operand(output_bytes)
 
-                address_token = self.current_token()
-                if address_token.type not in ['NUMBER', 'CHAR']:
-                    raise ValueError(f"Instruction '{op}' requires an address but got {address_token.type} with value {address_token.value}")
-                self.eat(address_token.type)
-                address = address_token.value
-                self.write_address(output_bytes, address)
+                elif op == "PUSH" or op == "POP":
+                    self.handle_register_operand(output_bytes)
 
-            elif op == "LDI":
-                if self.current_token().type != 'REGISTER':
-                    raise ValueError(f"Instruction 'LDI' requires a register but got {self.current_token().type} with value {self.current_token().value}")
-                reg = self.eat('REGISTER').value
-                if reg not in REGISTER_INDEX:
-                    raise ValueError(f"Unknown register '{reg}'")
+                elif op in ["CMP", "JE", "JNE", "JMP"]:
+                    self.handle_address_operand(output_bytes)
 
-                output_bytes.append(REGISTER_INDEX[reg])  # Write register index
-
-                if self.current_token().type == 'COMMA':
-                    self.eat('COMMA')  # Skip the comma
-                else:
-                    raise ValueError(f"Expected comma after register but got {self.current_token().type} with value {self.current_token().value}")
-
-                imm_token = self.current_token()
-                if imm_token.type not in ['NUMBER', 'CHAR']:
-                    raise ValueError(f"Instruction 'LDI' requires an immediate value but got {imm_token.type} with value {imm_token.value}")
-                self.eat(imm_token.type)
-                imm_value = imm_token.value
-                self.write_address(output_bytes, imm_value)
-
-            elif op == "HLT" or op == "NOP":
-                pass  # HLT and NOP instructions have no additional operands
+            elif token.type == 'NEWLINE':
+                self.eat('NEWLINE')  # Skip newline characters
 
         return output_bytes
+
+    def handle_register_operand(self, output_bytes):
+        if self.current_token().type != 'REGISTER':
+            raise ValueError(f"Expected register but got {self.current_token().type} with value {self.current_token().value}")
+        reg = self.eat('REGISTER').value
+        if reg not in REGISTER_INDEX:
+            raise ValueError(f"Unknown register '{reg}'")
+        output_bytes.append(REGISTER_INDEX[reg])
+
+        if self.current_token().type == 'COMMA':
+            self.eat('COMMA')  # Skip comma
+
+    def handle_address_operand(self, output_bytes):
+        address_token = self.current_token()
+        if address_token.type not in ['NUMBER', 'CHAR']:
+            raise ValueError(f"Expected number or char but got {address_token.type} with value {address_token.value}")
+        self.eat(address_token.type)
+        address = address_token.value
+        self.write_address(output_bytes, address)
+
+    def handle_immediate_operand(self, output_bytes):
+        imm_token = self.current_token()
+        if imm_token.type not in ['NUMBER', 'CHAR']:
+            raise ValueError(f"Expected number or char but got {imm_token.type} with value {imm_token.value}")
+        self.eat(imm_token.type)
+        imm_value = imm_token.value
+        self.write_address(output_bytes, imm_value)
 
     def write_address(self, output_bytes, address):
         output_bytes.extend(struct.pack('<Q', address))
@@ -229,8 +253,7 @@ if __name__ == "__main__":
 
         # Print the raw bytes to stdout
         sys.stdout.buffer.write(program_bytes)
-
-    except ValueError as e:
+        
+    except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
-        
